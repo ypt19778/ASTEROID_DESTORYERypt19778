@@ -17,10 +17,13 @@ function love.load()
     
     world:setCallbacks(onCollisionEnter, onCollisionExit)
 
+    Audio = require('audio')
     Spaceship = require('spaceship')
     Asteroid = require('asteroids')
 
-    game = {scale = 2, points = 0}
+    Audio:init()
+
+    game = {scale = 2, score = 0}
 
     spaceship = Spaceship.new(world)    
     
@@ -35,7 +38,9 @@ end
 
 function love.draw()
     love.graphics.print(_G.collisionData, 10, 10)
-    love.graphics.print(game.points, 300, 10)
+
+    local font = love.graphics.newFont(35)
+    love.graphics.print(game.score, font, 400, 10)
     spaceship:draw()
     Asteroid:draw()
 end
