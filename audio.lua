@@ -7,9 +7,7 @@ function Audio:init()
         },
 
         asteroid = {
-            explode = {
-                love.audio.newSource('audio/asteroid/explode.mp3', 'static'),
-            },
+            explode = love.audio.newSource('audio/asteroid/explode.mp3', 'static'),
         },
     }
 end

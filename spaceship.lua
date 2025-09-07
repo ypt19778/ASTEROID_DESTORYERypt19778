@@ -35,7 +35,6 @@ function Spaceship.new(world, speed, health, shield)
     instance.physics.body:setLinearDamping(2)
     instance.physics.shape = love.physics.newCircleShape(instance.radius)
     instance.physics.fixture = love.physics.newFixture(instance.physics.body, instance.physics.shape)
-    instance.physics.fixture:setRestitution(0.2)
     instance.physics.fixture:setUserData(instance)
 
     instance.lookAt = {
@@ -77,9 +76,20 @@ function Spaceship:move()
 end
 
 function Spaceship:update(dt)
+    audio.spaceship.shoot:setPitch(math.random(0.9, 1.1))
     self.afterburner_flash = self.afterburner_flash + dt * 40
     if self.afterburner_flash > 2 then
         self.afterburner_flash = 0
+    end
+    if self.y < 0 - 5 then
+        self.physics.body:setY(window_height - 5)
+    elseif self.x < 0 - 5 then
+        self.physics.body:setX(window_width - 5)
+    end
+    if self.y > window_height + 5 then
+        self.physics.body:setY(0 - 5)
+    elseif self.x > window_width + 5 then
+        self.physics.body:setX(0 - 5)
     end
     self:move()
     self:updateProjectiles()
@@ -87,7 +97,9 @@ end
 
 function Spaceship:draw()
     self:drawProjectiles()
-    love.graphics.print(self.rotation, 20, 20)
+    love.graphics.setColor(0, 1, 0)
+    love.graphics.circle('line', self.x, self.y, self.physics.shape:getRadius())
+    love.graphics.setColor(1, 1, 1)
 
     love.graphics.setColor(self.color[1], self.color[2], self.color[3], self.color[4])
     --love.graphics.draw(self.sprite, self.x, self.y, self.rotation - 0.79, game.scale, nil, self.sprite:getWidth() / 2, self.sprite:getHeight() / 2)
@@ -138,7 +150,7 @@ function Spaceship:shoot()
     projectile.cos = cos * projectile.speed
     projectile.sin = sin * projectile.speed
 
-    projectile.radius = 1
+    projectile.radius = 1.5
 
     projectile.lifetime = 75
     projectile.life = 0
@@ -155,6 +167,7 @@ function Spaceship:shoot()
     projectile.physics.fixture:setUserData(projectile)
 
     table.insert(self.projectiles, projectile)
+
     audio.spaceship.shoot:stop()
     audio.spaceship.shoot:play()
 end
@@ -162,18 +175,35 @@ end
 function Spaceship:updateProjectiles()
     for index, projectile in ipairs(self.projectiles) do
         projectile.x, projectile.y = projectile.physics.body:getPosition()
+        if projectile.y < 0 - 5 then
+            projectile.physics.body:setY(window_height - 5)
+        elseif projectile.x < 0 - 5 then
+            projectile.physics.body:setX(window_width - 5)
+        end
+        if projectile.y > window_height + 5 then
+            projectile.physics.body:setY(0 - 5)
+        elseif projectile.x > window_width + 5 then
+            projectile.physics.body:setX(0 - 5)
+        end
         projectile.physics.body:setLinearVelocity(projectile.cos, projectile.sin)
 
         projectile.life = projectile.life + 1
-        
-        -- make projectiles dissapear when it collides with an asteroid.
-            -- change asteroid removing steps so it can properly be resolved.
             
-        if projectile.life < 0 or _G.collisionData == "collide" then
-            projectile = {}
-            table.remove(self.projectiles, index)
+        if projectile.life > projectile.lifetime then
+            self:destroyProjectile(index)
         end
+        --change: projectile is not being destoryed when it hits an asteroid AND it will not destroy an asteroid at random points
+        --[[
+        in depth on no destroy: the bullet is being destroyed and it knows that it has collided with an asteroid BUT the asteroid does'nt
+        know that, and therefore is not destoryed. fix this by merging the two destroy code blocks.
+        ]]
     end
+end
+
+function Spaceship:destroyProjectile(index)
+    self.projectiles[index].physics.fixture:destroy()
+    --self.projectiles[index] = {}
+    table.remove(self.projectiles, index)
 end
 
 function Spaceship:drawProjectiles()
