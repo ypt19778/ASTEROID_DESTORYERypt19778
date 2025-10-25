@@ -6,17 +6,21 @@ Spaceship.__index = Spaceship
 function Spaceship.new(world)
     local instance = setmetatable({}, Spaceship)
     instance.tag = "SPACESHIP"
+    instance.name = ""
+    instance.named = false
     instance.mark = 'alive'
     instance.opt_menu = false
     instance.index = #Spaceships + 1
-    instance.x = 400
-    instance.y = 300
+    instance.x = window_width / 2
+    instance.y = window_height / 2
 
     instance.radius = 5
     instance.sprite = love.graphics.newImage('graphics/sprites/spaceship_2.png')
     instance.sprite_width, instance.sprite_height = instance.sprite:getDimensions()
     instance.width, instance.height = 10, 10
     instance.rotation = 0
+
+    instance.projectile_size = 0
 
     local pSystem_image = love.graphics.newImage('graphics/sprites/spaceship_particle.png')
     instance.pSystem = love.graphics.newParticleSystem(pSystem_image)
@@ -25,12 +29,9 @@ function Spaceship.new(world)
     instance.pSystem:setParticleLifetime(1, 2)
     instance.pSystem:setSpread(math.pi)
 
-    instance.iFrameTimer = 0
-    instance.iFrames = 10
-
     instance.color = {1, 1, 1, 1}
 
-    instance.afterburner_flash = 0
+    instance.iFrameFlash = 0
 
     instance.speed = 1
     instance.angularSpeed = 0.04
@@ -38,6 +39,8 @@ function Spaceship.new(world)
     instance.velocity = nil
     instance.maxVelocity = 230
     instance.isAccelerating = false
+
+    instance.iFrames = 200
 
     instance.physics = {}
     instance.physics.damping = 2.7
@@ -54,7 +57,14 @@ function Spaceship.new(world)
     }
 
     instance.projectiles = {}
+    instance.fireRate = 50 -- this is added to timer to see when timer > 10 or sum
+    instance.fireTimer = 30
     instance.asteroid_killcount = 0
+
+    instance.shields = 0
+    instance.shield_sprite = love.graphics.newImage('graphics/sprites/shield.png')
+    instance.shield_width, instance.shield_height = instance.shield_sprite:getDimensions()
+    instance.shield_rotation = 0
 
     table.insert(Spaceships, instance)
     return instance
@@ -71,11 +81,11 @@ function Spaceship:move()
 
     self.velocity = self.physics.body:getLinearVelocity()
     
-    local angle = math.atan2(self.y - self.lookAt.y, self.x - self.lookAt.x)
-    local cos = -math.cos(angle)
-    local sin = -math.sin(angle)
+    self.angle = math.atan2(self.y - self.lookAt.y, self.x - self.lookAt.x)
+    self.cos = -math.cos(self.angle)
+    self.sin = -math.sin(self.angle)
     if love.keyboard.isDown("w") and self.velocity < self.maxVelocity then
-        self.physics.body:applyLinearImpulse(self.speed * cos, self.speed * sin)
+        self.physics.body:applyLinearImpulse(self.speed * self.cos, self.speed * self.sin)
         self.isAccelerating = true
     else self.isAccelerating = false end
     if love.keyboard.isDown("a") then
@@ -92,26 +102,43 @@ function Spaceship:update(dt)
     audio.spaceship.shoot:setPitch(math.random(0.9, 1.1))
     self.pSystem:update(dt)
     if self.mark == 'alive' then
-        self.afterburner_flash = self.afterburner_flash + dt * 40
+        if self.fireTimer > 1 then
+            self.fireTimer = self.fireTimer - self.fireRate * dt
+        end
+        if self.iFrames > 0 then
+            self.iFrames = math.floor(self.iFrames - 1 * dt)
+        end
+        self.shield_rotation = self.shield_rotation + 1 * dt
+        self.iFrameFlash = self.iFrameFlash + dt * 20
         for _, asteroid in ipairs(Asteroids) do
-            if _G.collisionData == self.tag.."collide"..asteroid.tag then
-                if self.mark == 'alive' then
-                    self.pSystem:emit(30)
+            if self.iFrames == 0 then
+                if _G.collisionData == self.tag.."collide"..asteroid.tag then
+                    if self.shields == 0 then
+                        if self.mark == 'alive' then
+                            self.pSystem:emit(30)
+                        end
+                        self.mark = 'dead'
+                        game.saveScore()
+                        print('you died from:'..asteroid.tag)
+                        audio.sounds.explode:stop()
+                        audio.sounds.explode:play()
+                    elseif self.shields > 0 then
+                        self.shields = self.shields - 1
+                        audio.spaceship.shield_down:stop()
+                        audio.spaceship.shield_down:play()
+                        self.iFrames = 200
+                    end
                 end
-                self.mark = 'dead'
-                print('you died from:'..asteroid.tag)
-                audio.sounds.explode:stop()
-                audio.sounds.explode:play()
             end
         end
 
         -- add an end credits screen showing level reached and score, along with upgrades and aseroids destroyed, and time
         if self.mark == 'dead' and self.pSystem:getCount() == 0 then
-            self:destroy(self.index)
+            self:kill(self.index)
         end
 
-        if self.afterburner_flash > 2 then
-            self.afterburner_flash = 0
+        if self.iFrameFlash > 2 then
+            self.iFrameFlash = 0
         end
         if self.y < 0 - 5 then
             self.physics.body:setY(window_height - 5)
@@ -125,10 +152,21 @@ function Spaceship:update(dt)
         end
         self:move()
         self:updateProjectiles()
+    elseif self.opt_menu then
+        game.state = 'menu'
+        love.load()
     end
 end
 
 local scoreScreen_timer = 0
+
+function Spaceship:getNamingInput(input)
+    --adds last input to name
+    if #self.name < 12 then
+        self.name = self.name .. input
+    end
+end
+
 function Spaceship:printEndCredits()
     local scoreColor = {250 / 255, 250 / 255, 200 / 255}
     scoreScreen_timer = scoreScreen_timer + 1
@@ -136,9 +174,11 @@ function Spaceship:printEndCredits()
     love.graphics.setColor(scoreColor)
     love.graphics.print('you reached level: '..Level.level, game.font, 30, 30, nil, 1.1)
     love.graphics.print('asteroids killed: '..self.asteroid_killcount, game.font, 30, 50, nil, 1.1)
-    if scoreScreen_timer > 100 then
-        love.graphics.print('PRESS ANY KEY TO WARP TO MAIN MENU', game.font, 10, window_height / 2, nil, 1.1)
-        self.opt_menu = true
+
+    love.graphics.print("please enter your name: \n\n"..self.name.."\n\nand ENTER to continue.", game.font, window_width * (1/3), window_height * (1/4), nil, 1.2)
+
+    if self.named then
+        love.graphics.print('PRESS "q" TO WARP TO MAIN MENU', game.font, 10, window_height / 2, nil, 1.1)
     end
     love.graphics.setColor(1, 1, 1)
 end
@@ -169,7 +209,7 @@ function Spaceship:draw()
         local afterburner_left_x, afterburner_left_y = self.lookAt.x + math.cos(self.rotation - 0.2) * 19, self.lookAt.y + math.sin(self.rotation - 0.2) * 19
         local afterburner_right_x, afterburner_right_y = self.lookAt.x + math.cos(self.rotation + 0.2) * 19, self.lookAt.y + math.sin(self.rotation + 0.2) * 19
         local afterburner_front_x, afterburner_front_y = self.lookAt.x + math.cos(self.rotation) * 25, self.lookAt.y + math.sin(self.rotation) * 25
-        if self.isAccelerating == true and self.afterburner_flash >= 1 then
+        if self.isAccelerating == true and self.iFrameFlash >= 1 then
             love.graphics.line(afterburner_front_x, afterburner_front_y, afterburner_left_x, afterburner_left_y)
             love.graphics.line(afterburner_right_x, afterburner_right_y, afterburner_front_x, afterburner_front_y)
         end
@@ -177,7 +217,20 @@ function Spaceship:draw()
     --]]
     -- game-based spaceship
     if self.mark == 'alive' then
-        love.graphics.draw(self.sprite, self.x, self.y, self.rotation - 1.5, game.scale, nil, self.sprite_width / 2, self.sprite_height / 2)
+        if self.fireTimer > 1 then
+            love.graphics.rectangle('fill', self.x - self.fireTimer / 2, self.y - 25, self.fireTimer, 10)
+        end
+        if self.shields >= 1 then
+            love.graphics.setColor(1, 1, 0)
+            love.graphics.print('x'..self.shields..' shields', game.font, 30, window_height - 30)
+            love.graphics.setColor(1, 1, 1)
+            love.graphics.draw(self.shield_sprite, self.x, self.y, self.shield_rotation, game.scale * 2, nil, self.shield_width / 2, self.shield_height / 2)
+        end
+        if self.iFrames == 0 then
+            love.graphics.draw(self.sprite, self.x, self.y, self.rotation - 1.5, game.scale, nil, self.sprite_width / 2, self.sprite_height / 2)
+        elseif self.iFrameFlash >= 1 then
+            love.graphics.draw(self.sprite, self.x, self.y, self.rotation - 1.5, game.scale, nil, self.sprite_width / 2, self.sprite_height / 2)
+        end
         self:drawProjectiles()
     elseif self.mark == 'dead' then
         self:printEndCredits()
@@ -195,11 +248,23 @@ end
 function Spaceship:checkKeypress(key)
     if self.mark == 'alive' then
         if key == 'j' or key == 'k' or key == 'space' then
-            self:shoot()
+            if self.fireTimer < 1 then
+                self:shoot()
+                self.fireTimer = 30
+            end
         end
-    elseif self.opt_menu then
-        game.state = 'menu'
-        love.load()
+    elseif self.mark == 'dead' then
+        if key == 'backspace' then
+            self.name = string.sub(self.name, 1, #self.name - 1)
+        end
+        if key == 'return' then
+            self.named = true
+        end
+        if spaceship.named then
+            if key == 'q' then
+                spaceship.opt_menu = true
+            end
+        end
     end
 end
 
@@ -210,15 +275,15 @@ function Spaceship:shoot()
 
     local projectile = {}
     projectile.tag = "SPACESHIP_PROJECTILE"
-    projectile.x = self.x
-    projectile.y = self.y
+    projectile.x = self.lookAt.x
+    projectile.y = self.lookAt.y
 
     projectile.speed = 500
 
     projectile.cos = cos * projectile.speed
     projectile.sin = sin * projectile.speed
 
-    projectile.radius = 1.5
+    projectile.radius = self.projectile_size + 1.5
 
     projectile.lifetime = 75
     projectile.life = 0
@@ -231,12 +296,21 @@ function Spaceship:shoot()
 
     table.insert(self.projectiles, projectile)
 
+    projectile.trail = {}
+    projectile.trail_timer = 0
+    projectile.trail_spawnrate = 1 / projectile.speed
+
     audio.spaceship.shoot:stop()
     audio.spaceship.shoot:play()
 end
 
 function Spaceship:updateProjectiles()
     for index, projectile in ipairs(self.projectiles) do
+        projectile.trail_timer = projectile.trail_timer + 1
+        if projectile.trail_timer >= projectile.trail_spawnrate then
+            new_trail = {x = projectile.x, y = projectile.y, radius = projectile.radius}
+            table.insert(projectile.trail, new_trail)
+        end
         projectile.x, projectile.y = projectile.physics.body:getPosition()
         if projectile.y < 0 - 5 then
             projectile.physics.body:setY(window_height - 5)
@@ -253,28 +327,33 @@ function Spaceship:updateProjectiles()
         projectile.life = projectile.life + 1
             
         if projectile.life > projectile.lifetime then
-            self:destroyProjectile(index)
+            self:killProjectile(index)
         end
     end
 end
 
 function Spaceship:drawProjectiles()
     for _, projectile in ipairs(self.projectiles) do
-        love.graphics.circle('line', projectile.x, projectile.y, projectile.radius)
+        love.graphics.circle('fill', projectile.x, projectile.y, projectile.radius)
+        for index_trail, trail in ipairs(projectile.trail) do
+            trail.radius = trail.radius - 0.25
+            if trail.radius <= 0 then
+                table.remove(projectile.trail, index_trail)
+            end
+            love.graphics.circle('fill', trail.x, trail.y, trail.radius)
+        end
     end
 end
 
-function Spaceship:destroyProjectile(index)
+function Spaceship:killProjectile(index)
     self.projectiles[index].physics.fixture:destroy()
-    --self.projectiles[index] = {}
+    self.projectiles[index] = nil
     table.remove(self.projectiles, index)
-    print('killed spaceship projectile')
 end
 
-function Spaceship:destroy(index)
+function Spaceship:kill(index)
     Spaceships[index] = {}
     table.remove(Spaceships, index)
-    self.mark = false
     print('killed spaceship')
 end
 

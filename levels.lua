@@ -2,13 +2,17 @@ Level = {}
 Level.level = 1
 Level.transmit_timer = 0
 Level.oneEvent = 1
+Level.difficulty = 1
 
 function Level:update()
-    print('transitioning to next level...')
-    if Level.oneEvent == 1 then
-        Level.level = Level.level + 1
+    if not Powerups.rolled then
+        self.level = self.level + 1
+        for i, v in ipairs({5, 10, 15, 20}) do
+            if self.level == v then
+                self.difficulty = self.difficulty + 1
+            end
+        end
         Powerups:rollCards()
-        Level.oneEvent = 0
     end
     if Powerups.menu.done == true then
         love.load()

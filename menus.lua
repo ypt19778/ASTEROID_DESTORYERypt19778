@@ -4,35 +4,39 @@ Menu.__index = Menu
 function Menu.new()
     local instance = setmetatable({}, Menu)
     instance.buttons = {
-        {x = 100, y = 100, width = 100, height = 50, text = "start"},
-        {x = 100, y = 200, width = 100, height = 50, text = "hiscores"},
-        {x = 100, y = 300, width = 100, height = 50, text = "quit"}
+        {x = window_width - window_width + 100, y = 300, width = 100, height = 50, text = "start"},
+        {x = window_width - (window_width * (2/3)) + 100, y = 300, width = 100, height = 50, text = "hiscores"},
+        {x = window_width - (window_width * (1/3)) + 100, y = 300, width = 100, height = 50, text = "quit"}
     }
     instance.MAXWIDTH, instance.MAXHEIGHT = 200, 100
     instance.MINWIDTH, instance.MINHEIGHT = 100, 50
+    instance.title = "zoids"
 
     instance.tweenspeed = 5
+    instance.state = 'main'
     return instance
 end
 
 function Menu:update()
-    for num, button in ipairs(self.buttons) do
-        --[[
-        if checkOverlap(mouse, button) then
-            if button.width < self.MAXWIDTH and button.height < self.MAXHEIGHT then
-                button.width, button.height = button.width + self.tweenspeed, button.height + self.tweenspeed
-            end
-        elseif button.width > self.MINWIDTH and button.height > self.MINHEIGHT then
-            button.width, button.height = button.width - self.tweenspeed, button.height - self.tweenspeed
-        end
-        --]]
+    for num, button in ipairs(self.buttons) do  
+
     end
 end
 
 function Menu:draw()
-    for num, button in ipairs(self.buttons) do
-        love.graphics.print(button.text, button.x + button.width / 2, button.y + button.height / 2, nil, game.scale)
-        love.graphics.rectangle('line', button.x, button.y, button.width, button.height)
+    if self.state == 'main' then
+        love.graphics.print(self.title, game.font, window_width * (1/4), 40, nil, game.scale * 3)
+        for num, button in ipairs(self.buttons) do
+            love.graphics.print(button.text, game.font, button.x + button.width / 2 - 45, button.y + button.height / 2)
+            love.graphics.rectangle('line', button.x, button.y, button.width, button.height)
+        end
+    elseif self.state == 'hiscores' then
+        if love.keyboard.isDown('escape') then
+            self.state = 'main'
+        end
+        love.graphics.setFont(game.font)
+        love.graphics.print('HIGHSCORE TO BEAT: '..game.highscores[1].score..", BY"..game.highscores[1].name, 100, 30, nil, 1.2)
+        love.graphics.print('press "escape" to go back.', window_width - 350, window_height - 100)
     end
 end
 
@@ -41,9 +45,13 @@ function Menu:checkMousepress(MB)
         if MB == 1 then
             if checkOverlap(mouse, button) then
                 if button.text == 'start' then
+                    audio.menutheme:stop()
                     game.state = 'running'
                 elseif button.text == 'quit' then
                     love.event.quit()
+                elseif button.text == "hiscores" then
+                    self.state = 'hiscores'
+                    print(game.highscore)
                 end
             end
         end

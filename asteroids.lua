@@ -6,6 +6,7 @@ Asteroid.__index = Asteroid
 function Asteroid.new(world, size, tagnum, location)
     local instance = setmetatable({}, Asteroid)
     instance.tag = "ASTEROID"..tagnum
+    instance.tagNum = tagnum
     local vmax = 40
     local inward = 10
     local angle = {{vmax, math.random(vmax)}, {math.random(vmax), vmax}, {-vmax, -math.random(vmax)}, {-math.random(vmax), -vmax}}
@@ -29,9 +30,17 @@ function Asteroid.new(world, size, tagnum, location)
     }
 
     instance.size = size
+    local shield_type_dice = math.random(1, 6) -- 1 in 6
+    if Level.level > 5 and shield_type_dice == 1 then
+        instance.healthPoints = size
+        instance.hasShield = true
+    else instance.healthPoints = 1 end
     instance.radius = 10 * instance.size
     instance.sprite = instance.sprites[instance.size][math.random(3)]
     instance.angle = math.random(360)
+
+    instance.iFrames = 0
+    instance.iFrameFlash = 0
 
     local pSystem_image = love.graphics.newImage('graphics/sprites/asteroids/asteroid_particle.png')
     instance.pSystem = love.graphics.newParticleSystem(pSystem_image)
@@ -47,12 +56,11 @@ function Asteroid.new(world, size, tagnum, location)
     instance.physics.shape = love.physics.newCircleShape(instance.radius)
     instance.physics.fixture = love.physics.newFixture(instance.physics.body, instance.physics.shape)
     instance.physics.fixture:setUserData(instance)
-    instance.physics.fixture:setRestitution(0.2 * size)
-    
-    --[[
+
     local min_distance = 10
     local asteroid_distance = 0
     local spaceship_distance = 0
+    local loops = 0
     if #Asteroids > 1 then
         local placed = false
         repeat 
@@ -62,19 +70,26 @@ function Asteroid.new(world, size, tagnum, location)
                     spaceship_distance = love.physics.getDistance(instance.physics.fixture, spaceship.physics.fixture)
                     if asteroid_distance > min_distance and spaceship_distance > min_distance then
                         placed = true
-                        print("placed!")
+                        --print("placed!")
                     else
-                        print("instance.x, instance.y:"..instance.x..", "..instance.y)
+                        math.random(os.clock())
+                        --print("instance.x, instance.y:"..instance.x..", "..instance.y)
                         instance.x, instance.y = math.random(window_width), math.random(window_height)
-                        print("not placed. asteroid distance:"..asteroid_distance.."spaceship distance:"..spaceship_distance)
+                        --print("not placed. asteroid distance:"..asteroid_distance.."spaceship distance:"..spaceship_distance)
                     end
                 end
             end
-        until placed == true
+            loops = loops + 1
+            if loops >= 50 then
+                instance.x, instance.y = 0, 0
+                placed = true
+            end
+        until placed == true 
     end
-    ]]
+    
+    --[[
     local placed = false
-    local mindist = 30
+    local mindist = 100
     local loopcounter = 0
     local maxloops = 100
     if #Asteroids > 1 then
@@ -82,10 +97,14 @@ function Asteroid.new(world, size, tagnum, location)
             loopcounter = loopcounter + 1
             for _, asteroid in ipairs(Asteroids) do
                 for _, spaceship in ipairs(Spaceships) do
+                    --[[
                     local spaceship_dist = love.physics.getDistance(instance.physics.fixture, spaceship.physics.fixture)
                     local asteroid_dist = love.physics.getDistance(instance.physics.fixture, asteroid.physics.fixture)
+                    
+                    local spaceship_dist = getDistance({spaceship.x, spaceship.y, instance.x, instance.y})
+                    local asteroid_dist  = getDistance({asteroid.x, asteroid.y, instance.x, instance.y})
                     print(asteroid_dist..", "..spaceship_dist)
-                    if asteroid_dist >= mindist and spaceship_dist >= mindist * 1.5 then
+                    if asteroid_dist > mindist and spaceship_dist > mindist then
                         placed = true
                         print('placed. dist_spaceship='..spaceship_dist..", dist_asteroid="..asteroid_dist)
                     else
@@ -97,8 +116,9 @@ function Asteroid.new(world, size, tagnum, location)
                     end
                 end
             end
-        until placed == true
+        until placed == true 
     end
+    ]]
     instance.velAngle = angle[math.random(4)]
 
     instance.mark = "alive"
@@ -111,6 +131,10 @@ function Asteroid:update(dt)
         asteroid.pSystem:update(dt)
         asteroid.x, asteroid.y = asteroid.physics.body:getPosition()
         asteroid.angle = asteroid.physics.body:getAngle()
+        if asteroid.iFrames > 0 then
+            asteroid.iFrames = math.floor(asteroid.iFrames - 1 * dt)
+        end
+        asteroid.iFrameFlash = asteroid.iFrameFlash + dt * 20
         local velocity = asteroid.physics.body:getLinearVelocity()
 
         if asteroid.y < 0 - 10 then
@@ -127,25 +151,49 @@ function Asteroid:update(dt)
 
         for index_projectile, projectile in ipairs(spaceship.projectiles) do
             if _G.collisionData == asteroid.tag.."collide"..projectile.tag or _G.collisionData == projectile.tag.."collide"..asteroid.tag then
-                if asteroid.mark == 'alive' then
-                    asteroid.mark = 'dead'
-                    asteroid.physics.fixture:destroy()
-
-                    spaceship:destroyProjectile(index_projectile)
-                    spaceship.asteroid_killcount = spaceship.asteroid_killcount + 1
-
-                    game.score = game.score + asteroid.size * 10
-
-                    asteroid.pSystem:emit(10 * asteroid.size)
-
-                    audio.sounds.explode:stop()
-                    audio.sounds.explode:play()
+                asteroid.healthPoints = asteroid.healthPoints - 1
+                if asteroid.hasShield then
+                    audio.asteroid.shield_down:stop()
+                    audio.asteroid.shield_down:play()
                 end
+                asteroid.iFrames = 100
+
+                spaceship:killProjectile(index_projectile)
+                spaceship.asteroid_killcount = spaceship.asteroid_killcount + 1
             end
         end
 
+        if asteroid.healthPoints <= 0 then
+            if asteroid.mark == 'alive' then
+                asteroid.mark = 'dead'
+
+                asteroid.pSystem:emit(10 * asteroid.size)
+                asteroid.physics.fixture:destroy()
+
+                audio.sounds.explode:stop()
+                audio.sounds.explode:play()
+                game.score = game.score + asteroid.size * 10
+
+                if asteroid.size > 1 then
+                    --[[
+                    local numNewAsteroids = 2
+                    for i = 1, numNewAsteroids do
+                        local newSize = asteroid.size - 1
+                        local newTagNum = #Asteroids + 1
+                        game_asteroid = Asteroid.new(world, newSize, newTagNum, {x = asteroid.x, y = asteroid.y})
+                        game_asteroid.x = asteroid.x + math.random(-20, 20)
+                        game_asteroid.y = asteroid.y + math.random(-20, 20)
+                        game_asteroid.physics.body:setPosition(asteroid.x, asteroid.y)
+                    end
+                    ]]
+                end
+            end
+        elseif asteroid.healthPoints == 1 then
+            asteroid.hasShield = false
+        end
+
         if asteroid.mark == "dead" and asteroid.pSystem:getCount() == 0 then
-            asteroid:destroy(index)
+            asteroid:kill(index)
         end
     end
 end
@@ -153,17 +201,23 @@ end
 function Asteroid:draw()
     for index, asteroid in ipairs(Asteroids) do
         if asteroid.mark == "alive" then
-            love.graphics.print(asteroid.pSystem:getCount(), 100, 100)
-            love.graphics.circle('line', asteroid.x, asteroid.y, asteroid.radius)
-            love.graphics.print(asteroid.tag, asteroid.x, asteroid.y - 10)
-
-            love.graphics.draw(asteroid.sprite, asteroid.x, asteroid.y, asteroid.angle, game.scale, nil, asteroid.sprite:getWidth() / 2, asteroid.sprite:getHeight() / 2)
+            if asteroid.healthPoints > 1 and asteroid.hasShield then
+                love.graphics.setColor(1, 1, 0)
+            end
+            if asteroid.iFrames == 0 then
+                love.graphics.draw(asteroid.sprite, asteroid.x, asteroid.y, asteroid.angle, game.scale, nil, asteroid.sprite:getWidth() / 2, asteroid.sprite:getHeight() / 2)
+            elseif asteroid.iFrameFlash >= 1 then
+                love.graphics.draw(asteroid.sprite, asteroid.x, asteroid.y, asteroid.angle, game.scale, nil, asteroid.sprite:getWidth() / 2, asteroid.sprite:getHeight() / 2)
+            end
+            if asteroid.healthPoints > 1 then love.graphics.print(asteroid.healthPoints - 1, game.font, asteroid.x, asteroid.y) end
+            love.graphics.setColor(1, 1, 1)
         end
         love.graphics.draw(asteroid.pSystem, asteroid.x, asteroid.y, nil, game.scale)
+        --love.graphics.print(asteroid.tag, asteroid.x, asteroid.y - 10)
     end
 end
 
-function Asteroid:destroy(index)
+function Asteroid:kill(index)
     self.tag, self.mark = false, false
     table.remove(Asteroids, index)
     self = {}
