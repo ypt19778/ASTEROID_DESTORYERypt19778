@@ -9,7 +9,17 @@ game = {
     font = love.graphics.newFont('graphics/fonts/PressStart2P-Regular.ttf'),
 }
 game.serialize = function (o)
-
+    local tab = "     "
+    if type(o) == "table" then
+        love.filesystem.write(game.saveDirectoryFile, "{\n")
+        for k, v in pairs(o) do
+            love.filesystem.append(tab..k.." = ")
+            game.serialize(v)
+            love.filesystem.append(game.saveDirectoryFile, ",\n")
+        end
+        love.filesystem.append("}\n")
+    end
+    print('serailized highscore data')
 end
 
 game.deserialize = function (o)

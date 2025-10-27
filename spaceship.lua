@@ -118,7 +118,7 @@ function Spaceship:update(dt)
                             self.pSystem:emit(30)
                         end
                         self.mark = 'dead'
-                        game.saveScore()
+                        game.serialize()
                         print('you died from:'..asteroid.tag)
                         audio.sounds.explode:stop()
                         audio.sounds.explode:play()

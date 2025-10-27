@@ -7,7 +7,7 @@ Level.difficulty = 1
 function Level:update()
     if not Powerups.rolled then
         self.level = self.level + 1
-        for i, v in ipairs({5, 10, 15, 20}) do
+        for i, v in ipairs({3, 6, 9, 12, 15, 18, 30, 31, 32}) do -- max difficulty = 9
             if self.level == v then
                 self.difficulty = self.difficulty + 1
             end

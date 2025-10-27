@@ -10,7 +10,7 @@ function Menu.new()
     }
     instance.MAXWIDTH, instance.MAXHEIGHT = 200, 100
     instance.MINWIDTH, instance.MINHEIGHT = 100, 50
-    instance.title = "zoids"
+    instance.title = "Asterzoids"
 
     instance.tweenspeed = 5
     instance.state = 'main'
@@ -18,14 +18,12 @@ function Menu.new()
 end
 
 function Menu:update()
-    for num, button in ipairs(self.buttons) do  
 
-    end
 end
 
 function Menu:draw()
     if self.state == 'main' then
-        love.graphics.print(self.title, game.font, window_width * (1/4), 40, nil, game.scale * 3)
+        love.graphics.print(self.title, game.font, window_width * (1/5), 40, nil, game.scale * 2)
         for num, button in ipairs(self.buttons) do
             love.graphics.print(button.text, game.font, button.x + button.width / 2 - 45, button.y + button.height / 2)
             love.graphics.rectangle('line', button.x, button.y, button.width, button.height)
