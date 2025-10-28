@@ -1,4 +1,2 @@
-card_ideas.md
-implementation.md
-
-conf.lua
+*.md
+!README.md
