@@ -33,8 +33,13 @@ function Menu:draw()
             self.state = 'main'
         end
         love.graphics.setFont(game.font)
-        love.graphics.print('HIGHSCORE TO BEAT: '..game.highscores[1].score..", BY"..game.highscores[1].name, 100, 30, nil, 1.2)
+        if game.highscores[1] then
+            love.graphics.print('HIGHSCORE TO BEAT: '..game.highscores[1].score..", BY: "..game.highscores[1].name..".", 100, 30, nil, 1.2)
+        end
         love.graphics.print('press "escape" to go back.', window_width - 350, window_height - 100)
+        for i, v in ipairs(game.highscores) do
+            love.graphics.print(game.highscores[i].name..".\nscore:"..game.highscores[i].score, 100 * i, 300, nil, 1.1)
+        end
     end
 end
 

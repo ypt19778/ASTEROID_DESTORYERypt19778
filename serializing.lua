@@ -27,7 +27,11 @@ function M:serialize(o)
     elseif type(o) == 'table' then
         love.filesystem.append(self.currentFile, "{\n")
         for k, v in pairs(o) do
-            love.filesystem.append(self.currentFile, tab..k.." = ")
+            if type(k) == 'string' then
+                love.filesystem.append(self.currentFile, tab.."["..string.format("%q", k).."] = ")
+            else
+                love.filesystem.append(self.currentFile, tab.."["..k.."]".." = ")
+            end
             self:serialize(v)
             love.filesystem.append(self.currentFile, ",\n")
         end
@@ -42,15 +46,7 @@ function M:deserialize(file)
 end
 
 function M:translate(o)
-    return assert(load("return "..o))()
+    return string.sub("%q", o)
 end
-
---[[
-function M:deserializeAndTranslate()
-    local o_data = M:deserialize()
-    local o = M:translate(o_data)
-    return o
-end
-]]
 
 return M

@@ -1,37 +1,21 @@
 math.randomseed(os.clock())
 love.graphics.setDefaultFilter('nearest', 'nearest')
 game = {
-    saveDirectoryFile = "score_save_data.txt",
+    saveDirectoryFile = "savedata.json",
 
     scale = 2, 
     state = 'menu', 
     score = 0, 
     font = love.graphics.newFont('graphics/fonts/PressStart2P-Regular.ttf'),
 }
-game.serialize = function (o)
-    local tab = "     "
-    if type(o) == "table" then
-        love.filesystem.write(game.saveDirectoryFile, "{\n")
-        for k, v in pairs(o) do
-            love.filesystem.append(tab..k.." = ")
-            game.serialize(v)
-            love.filesystem.append(game.saveDirectoryFile, ",\n")
-        end
-        love.filesystem.append("}\n")
-    end
-    print('serailized highscore data')
+game.highscores = {}
+game.storeScore = function (o)
+    table.insert(game.highscores, {score = o.score, name = o.name})
+    json_highscores = json.encode(game.highscores)
+    print(json_highscores)
+    love.filesystem.write(game.saveDirectoryFile, json_highscores)
 end
 
-game.deserialize = function (o)
-    
-end
-game.highscores = {first = {score = 10, name = "love2d"}}
-for outk, outv in pairs(game.highscores) do
-    print("key="..outk..", value="..type(outv))
-    for ink, inv in pairs(outv) do
-        print("key="..ink..", value="..inv)
-    end
-end
 
 window_width, window_height = love.graphics.getDimensions()
 
@@ -76,11 +60,15 @@ getDistance = function (...)
 end
 
 -- requires & inits
+    --libraries
+ser = require('serializing')
+json = require('json')
+    --objects and stuff
 Audio = require('audio')
 Audio:init()
 Menu = require('menus')
 require('powerups')
-require('levels')    
+require('levels')
 menu = Menu.new()
 Spaceship = require('spaceship')
 spaceship = Spaceship.new(world)
@@ -91,9 +79,15 @@ function love.load()
         return a.score > b.score
     end)
 
+    json_highscores = love.filesystem.read(game.saveDirectoryFile)
+    print(json_highscores)
+    
+    game.highscores = json.decode(json_highscores)
+    --print(game.highscores_data)
+
     math.randomseed(os.clock())
 
-    game.highscore = love.filesystem.read(game.saveDirectoryFile)
+    game.score = 0
 
     Powerups.rolled = false
     Powerups.cards = {}
@@ -101,6 +95,7 @@ function love.load()
     Powerups.menu.done = false
     spaceship.mark = 'alive'
     spaceship.physics.body:setPosition(window_width / 2, window_height / 2)
+    spaceship.asteroid_killcount = 0
     spaceship.iFrames = 200
     for asteroid_index, asteroid in ipairs(Asteroids) do
         if asteroid.mark == 'alive' then

@@ -118,7 +118,6 @@ function Spaceship:update(dt)
                             self.pSystem:emit(30)
                         end
                         self.mark = 'dead'
-                        game.serialize()
                         print('you died from:'..asteroid.tag)
                         audio.sounds.explode:stop()
                         audio.sounds.explode:play()
@@ -132,7 +131,6 @@ function Spaceship:update(dt)
             end
         end
 
-        -- add an end credits screen showing level reached and score, along with upgrades and aseroids destroyed, and time
         if self.mark == 'dead' and self.pSystem:getCount() == 0 then
             self:kill(self.index)
         end
@@ -154,6 +152,7 @@ function Spaceship:update(dt)
         self:updateProjectiles()
     elseif self.opt_menu then
         game.state = 'menu'
+        game.storeScore({score = game.score, name = self.name})
         love.load()
     end
 end
@@ -162,7 +161,7 @@ local scoreScreen_timer = 0
 
 function Spaceship:getNamingInput(input)
     --adds last input to name
-    if #self.name < 12 then
+    if #self.name < 12 and not self.opt_menu then
         self.name = self.name .. input
     end
 end
@@ -260,9 +259,9 @@ function Spaceship:checkKeypress(key)
         if key == 'return' then
             self.named = true
         end
-        if spaceship.named then
+        if self.named then
             if key == 'q' then
-                spaceship.opt_menu = true
+                self.opt_menu = true
             end
         end
     end
