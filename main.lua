@@ -164,6 +164,7 @@ function love.textinput(text)
 end
 
 function love.draw()
+    --[[
     local bodies = world:getBodies()
     for _, body in ipairs(bodies) do
         local fixtures = body:getFixtures()
@@ -183,6 +184,8 @@ function love.draw()
             end
         end
     end
+    ]]
+    
     if game.state == 'menu' then
         game.score = 0
         love.graphics.print('press escape + 1 to exit game. (ALL TIMES.)', game.font, 10, 10)
