@@ -14,8 +14,10 @@ function Menu.new()
 
     instance.tweenspeed = 5
     instance.state = 'main'
+
     return instance
 end
+
 
 function Menu:update()
 
@@ -38,7 +40,16 @@ function Menu:draw()
         end
         love.graphics.print('press "escape" to go back.', window_width - 350, window_height - 100)
         for i, v in ipairs(game.highscores) do
-            love.graphics.print(game.highscores[i].name..".\nscore:"..game.highscores[i].score, 100 * i, 300, nil, 1.1)
+            if i > 10 then break end
+            local x = window_width * (1/3)
+            local y = (window_height * (1/10)) + (i * 30)
+            love.graphics.setColor(0, 1, 0)
+            lastScore = ""
+            if spaceship_lastname == v.name and spaceship_lastscore == v.score then lastScore = "Your place! > " end
+            love.graphics.print(lastScore, game.font, x - 200, y)
+            if i <= 3 then love.graphics.setColor(1, 1, 0) end
+                love.graphics.print(i.."."..v.name..", score:"..v.score, game.font, x, y)
+            love.graphics.setColor(1, 1, 1)
         end
     end
 end

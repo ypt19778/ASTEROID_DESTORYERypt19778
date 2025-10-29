@@ -1,5 +1,7 @@
 math.randomseed(os.clock())
 love.graphics.setDefaultFilter('nearest', 'nearest')
+love.window.setFullscreen(false)
+
 game = {
     saveDirectoryFile = "savedata.json",
 
@@ -15,6 +17,11 @@ game.storeScore = function (o)
     print(json_highscores)
     love.filesystem.write(game.saveDirectoryFile, json_highscores)
 end
+--[[
+game.cleanFile = function ()
+    love.filesystem.write(game.saveDirectoryFile, "")
+end
+]]
 
 
 window_width, window_height = love.graphics.getDimensions()
@@ -61,7 +68,6 @@ end
 
 -- requires & inits
     --libraries
-ser = require('serializing')
 json = require('json')
     --objects and stuff
 Audio = require('audio')
@@ -75,19 +81,19 @@ spaceship = Spaceship.new(world)
 Asteroid = require('asteroids')
 
 function love.load()
-    table.sort(game.highscores, function(a, b)
-        return a.score > b.score
-    end)
-
+    if spaceship.name and game.score then
+        spaceship_lastname = spaceship.name; spaceship_lastscore = game.score
+    end
     json_highscores = love.filesystem.read(game.saveDirectoryFile)
     print(json_highscores)
     
     game.highscores = json.decode(json_highscores)
-    --print(game.highscores_data)
+    table.sort(game.highscores, function(a, b)
+        return a.score > b.score
+    end)
+    print(game.highscores_data)
 
     math.randomseed(os.clock())
-
-    game.score = 0
 
     Powerups.rolled = false
     Powerups.cards = {}
@@ -158,7 +164,6 @@ function love.textinput(text)
 end
 
 function love.draw()
-    --[[
     local bodies = world:getBodies()
     for _, body in ipairs(bodies) do
         local fixtures = body:getFixtures()
@@ -178,8 +183,9 @@ function love.draw()
             end
         end
     end
-    ]]
     if game.state == 'menu' then
+        game.score = 0
+        love.graphics.print('press escape + 1 to exit game. (ALL TIMES.)', game.font, 10, 10)
         Asteroid:draw()
         menu:draw()
     elseif game.state == 'running' then

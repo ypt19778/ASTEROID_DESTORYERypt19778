@@ -66,6 +66,8 @@ function Spaceship.new(world)
     instance.shield_width, instance.shield_height = instance.shield_sprite:getDimensions()
     instance.shield_rotation = 0
 
+    instance.bombs = 0
+
     table.insert(Spaceships, instance)
     return instance
 end
@@ -149,7 +151,7 @@ function Spaceship:update(dt)
             self.physics.body:setX(0 - 5)
         end
         self:move()
-        self:updateProjectiles()
+        self:updateProjectiles(dt)
     elseif self.opt_menu then
         game.state = 'menu'
         game.storeScore({score = game.score, name = self.name})
@@ -167,7 +169,7 @@ function Spaceship:getNamingInput(input)
 end
 
 function Spaceship:printEndCredits()
-    local scoreColor = {250 / 255, 250 / 255, 200 / 255}
+    local scoreColor = {1, 1, 1}
     scoreScreen_timer = scoreScreen_timer + 1
 
     love.graphics.setColor(scoreColor)
@@ -225,6 +227,11 @@ function Spaceship:draw()
             love.graphics.setColor(1, 1, 1)
             love.graphics.draw(self.shield_sprite, self.x, self.y, self.shield_rotation, game.scale * 2, nil, self.shield_width / 2, self.shield_height / 2)
         end
+        if self.bombs >= 1 then
+            love.graphics.setColor(1, 0, 0)
+            love.graphics.print('x'..self.bombs..' bombs', game.font, 30, window_height - 45)
+            love.graphics.setColor(1, 1, 1)
+        end
         if self.iFrames == 0 then
             love.graphics.draw(self.sprite, self.x, self.y, self.rotation - 1.5, game.scale, nil, self.sprite_width / 2, self.sprite_height / 2)
         elseif self.iFrameFlash >= 1 then
@@ -251,6 +258,16 @@ function Spaceship:checkKeypress(key)
                 self:shoot()
                 self.fireTimer = 30
             end
+        elseif key == 'b' then
+            -- if the bomb card exists then
+                -- bomb cards - 1
+            if self.bombs >= 1 then
+                self.bombs = self.bombs - 1
+                local num_bombs = 8
+                for i = 1, num_bombs do
+                    self:shoot("bomb", nil, nil, 360 / num_bombs * i)
+                end
+            end
         end
     elseif self.mark == 'dead' then
         if key == 'backspace' then
@@ -267,25 +284,45 @@ function Spaceship:checkKeypress(key)
     end
 end
 
-function Spaceship:shoot()
+function Spaceship:shoot(projectile_type, x, y, shift_angle)
+    local shift_angle = shift_angle or 0 
+    local ofs_rad = math.rad(shift_angle)
     local angle = math.atan2(self.y - self.lookAt.y, self.x - self.lookAt.x)
+    local ofs_angle = angle + ofs_rad
+    angle = math.fmod(ofs_angle + 2 * math.pi, 2 * math.pi)
     local cos = -math.cos(angle)
     local sin = -math.sin(angle)
+    print("angle: "..angle..", cosine: "..cos..", sine: "..sin)
 
     local projectile = {}
+    projectile.type = projectile_type or "default"
+    print('spaceship shoot, type:'..projectile.type)
     projectile.tag = "SPACESHIP_PROJECTILE"
     projectile.x = self.lookAt.x
     projectile.y = self.lookAt.y
 
-    projectile.speed = 500
+    if projectile.type == "default" then
+        projectile.speed = 500
+        projectile.radius = self.projectile_size + 1.5
+    elseif projectile.type == "bomb" then
+        projectile.speed = 250
+        projectile.radius = self.projectile_size + 10
+    else
+        projectile.speed = 0
+        projectile.radius = radius
+    end
 
     projectile.cos = cos * projectile.speed
     projectile.sin = sin * projectile.speed
 
-    projectile.radius = self.projectile_size + 1.5
-
-    projectile.lifetime = 75
+    projectile.lifetime = 75 * (projectile.speed * 0.01)
     projectile.life = 0
+
+    projectile.bomb_particle_img = love.graphics.newImage('graphics/sprites/bomb_particle.png')
+    projectile.bombpSystem = love.graphics.newParticleSystem(projectile.bomb_particle_img, 999)
+    --projectile.bombpSystem:setSizeVariation(1)
+    projectile.bombpSystem:setLinearAcceleration(-100, -100, 100, 100)
+    projectile.bombpSystem:setParticleLifetime(10)
 
     projectile.physics = {}
     projectile.physics.body = love.physics.newBody(world, self.lookAt.x, self.lookAt.y, 'dynamic')
@@ -303,9 +340,27 @@ function Spaceship:shoot()
     audio.spaceship.shoot:play()
 end
 
-function Spaceship:updateProjectiles()
-    for index, projectile in ipairs(self.projectiles) do
+function Spaceship:updateProjectiles(dt)
+    for index_projectile, projectile in ipairs(self.projectiles) do
+        for index_asteroid, asteroid in ipairs(Asteroids) do
+            if _G.collisionData == asteroid.tag.."collide"..projectile.tag or _G.collisionData == projectile.tag.."collide"..asteroid.tag then
+                asteroid.healthPoints = asteroid.healthPoints - 1
+                if asteroid.hasShield then
+                    audio.asteroid.shield_down:stop()
+                    audio.asteroid.shield_down:play()
+                end
+                asteroid.iFrames = 100
+
+                --if projectile.type == "bomb" then
+                    projectile.bombpSystem:emit(999)
+                --end
+
+                spaceship:killProjectile(index_projectile)
+                spaceship.asteroid_killcount = spaceship.asteroid_killcount + 1
+            end
+        end
         projectile.trail_timer = projectile.trail_timer + 1
+        projectile.bombpSystem:update(dt)
         if projectile.trail_timer >= projectile.trail_spawnrate then
             new_trail = {x = projectile.x, y = projectile.y, radius = projectile.radius}
             table.insert(projectile.trail, new_trail)
@@ -322,18 +377,24 @@ function Spaceship:updateProjectiles()
             projectile.physics.body:setX(0 - 5)
         end
         projectile.physics.body:setLinearVelocity(projectile.cos, projectile.sin)
-
         projectile.life = projectile.life + 1
             
         if projectile.life > projectile.lifetime then
-            self:killProjectile(index)
+            self:killProjectile(index_projectile)
         end
     end
 end
 
 function Spaceship:drawProjectiles()
-    for _, projectile in ipairs(self.projectiles) do
+    for index_projectile, projectile in ipairs(self.projectiles) do
         love.graphics.circle('fill', projectile.x, projectile.y, projectile.radius)
+        print('drawproj: type'..projectile.type)
+        if projectile.type == "bomb" then
+            love.graphics.setColor(1, 0, 0)
+            print('set vol to red')
+            love.graphics.draw(projectile.bombpSystem, projectile.x, projectile.y)
+        end 
+
         for index_trail, trail in ipairs(projectile.trail) do
             trail.radius = trail.radius - 0.25
             if trail.radius <= 0 then
@@ -341,6 +402,7 @@ function Spaceship:drawProjectiles()
             end
             love.graphics.circle('fill', trail.x, trail.y, trail.radius)
         end
+        love.graphics.setColor(1, 1, 1)
     end
 end
 

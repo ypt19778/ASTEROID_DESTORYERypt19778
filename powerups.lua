@@ -7,7 +7,8 @@ Powerups.card_rotation = 1
 Powerups.spin_timer = 0
 Powerups.card_types = {
     'less cooldown',
-    'add shield'
+    'add shield',
+    'add bomb'
 }
 Powerups.cards = {}
 Powerups.buttons = {
@@ -72,6 +73,9 @@ function Powerups:checkMousepress(x, y, MB)
                 elseif card.powerup == 'add shield' then
                     self.spaceship.shields = (self.spaceship.shields) + 1
                     print('added a shield'..self.spaceship.shields)
+                elseif card.powerup == 'add bomb' then
+                    self.spaceship.bombs = self.spaceship.bombs + 1
+                    print('added bomb to spaceship.')
                 end
                 self.menu.done = true
                 break

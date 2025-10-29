@@ -149,20 +149,6 @@ function Asteroid:update(dt)
         end
         asteroid.physics.body:setLinearVelocity(asteroid.velAngle[1], asteroid.velAngle[2])
 
-        for index_projectile, projectile in ipairs(spaceship.projectiles) do
-            if _G.collisionData == asteroid.tag.."collide"..projectile.tag or _G.collisionData == projectile.tag.."collide"..asteroid.tag then
-                asteroid.healthPoints = asteroid.healthPoints - 1
-                if asteroid.hasShield then
-                    audio.asteroid.shield_down:stop()
-                    audio.asteroid.shield_down:play()
-                end
-                asteroid.iFrames = 100
-
-                spaceship:killProjectile(index_projectile)
-                spaceship.asteroid_killcount = spaceship.asteroid_killcount + 1
-            end
-        end
-
         if asteroid.healthPoints <= 0 then
             if asteroid.mark == 'alive' then
                 asteroid.mark = 'dead'
