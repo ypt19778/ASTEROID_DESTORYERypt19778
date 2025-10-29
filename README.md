@@ -1,6 +1,6 @@
 Asterzoids is a high-score roguelike that brings modern upgrade systems into the classic Asteroids arcade game. Developed by a 12-year-old gamer who goes by Mao Diao, the game challenges you to pilot a small ship through an endless, procedurally generated levels of asteroid fileds to with a goal of getting the highest score.
 
-![asterzoids title screen]([https://github.com/ypt19778/ASTEROID_DESTORYERypt19778/blob/master/zoids.png](https://github.com/ypt19778/ASTEROID_DESTORYERypt19778/blob/master/zoids.png))
+![asterzoids title screen](https://github.com/ypt19778/ASTEROID_DESTORYERypt19778/blob/master/zoids.png)
 
 The Game Loop:
 
