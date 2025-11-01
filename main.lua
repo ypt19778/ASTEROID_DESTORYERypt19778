@@ -1,6 +1,6 @@
 math.randomseed(os.clock())
 love.graphics.setDefaultFilter('nearest', 'nearest')
-love.window.setFullscreen(false)
+love.window.setFullscreen(true)
 
 game = {
     saveDirectoryFile = "savedata.json",
@@ -9,7 +9,11 @@ game = {
     state = 'menu', 
     score = 0, 
     font = love.graphics.newFont('graphics/fonts/PressStart2P-Regular.ttf'),
+
+    alien_spawnchance = 2000, -- "one in a _"
 }
+game.def_alien_spawnchance = game.alien_spawnchance
+
 game.highscores = {}
 game.storeScore = function (o)
     table.insert(game.highscores, {score = o.score, name = o.name})
@@ -34,9 +38,25 @@ onCollisionEnter = function (a, b)
     local o1, o2 = a:getUserData(), b:getUserData()
 
     if o1 and o2 then
-        o1.type = string.lower(o1.tag:gsub("%d", ""))
-        o2.type = string.lower(o2.tag:gsub("%d", ""))
-        if o1.type == "asteroid" and o2.type == "asteroid" then return end
+        local ignoredGsubPatterns = {"_", "%d"}
+        local ignoredReplacement = ""
+        for _, pattern in ipairs(ignoredGsubPatterns) do
+            o1.type = string.lower(o1.tag:gsub(pattern, ignoredReplacement))
+            o2.type = string.lower(o2.tag:gsub(pattern, ignoredReplacement))
+        end
+
+        local ignoredCheckPatterns = {
+            {"asteroid", "alien"},
+            {"asteroid", "asteroid"},
+            {"alien_projectile", "asteroid"},
+            {"alien_projectile", "alien"}
+        }
+        for _, pattern in ipairs(ignoredCheckPatterns) do
+            if o1.type == pattern[1] and o2.type == pattern[2] then
+                return
+            end
+        end
+
         _G.collisionData = o1.tag.."collide"..o2.tag
         table.insert(_G.collisionTable, {collisionData = o1.tag, o2.tag})
     end
@@ -79,6 +99,7 @@ menu = Menu.new()
 Spaceship = require('spaceship')
 spaceship = Spaceship.new(world)
 Asteroid = require('asteroids')
+Alien = require('aliens')
 
 function love.load()
     if spaceship.name and game.score then
@@ -113,11 +134,23 @@ function love.load()
         print('reset "cave" progress.')
         Level.level = 1
         Level.difficulty = 1
+        game.alien_spawnchance = game.def_alien_spawnchance
         spaceship.physics.fixture:destroy()
         spaceship:kill(1)
         spaceship = Spaceship.new(world)
         Powerups:setSpaceship(spaceship)
     end
+    for index_alien, alien in ipairs(Aliens) do
+        for index_projectile = #alien.projectiles, 1, -1 do
+            alien.projectiles[index_projectile].physics.fixture:destroy()
+            table.remove(alien.projectiles, index_projectile)
+        end
+        Alien:kill(index_alien)
+    end
+    spaceship.fuel = spaceship.maxFuel
+
+    Aliens = {}
+    
     Asteroids = {}
     start_asteroids = 5 * Level.difficulty
     for i = 1, start_asteroids do
@@ -143,12 +176,19 @@ function love.update(dt)
         Asteroid:update(dt)
         menu:update()
     elseif game.state == 'running' then
-        if love.keyboard.isDown('lshift') and love.keyboard.isDown('e') then
+        if love.keyboard.isDown('lshift') and love.keyboard.isDown('e') and love.keyboard.isDown('lctrl') then
             instaLv()
         end
         audio.sounds.explode:setPitch(math.random(3))
+
         Asteroid:update(dt)
         spaceship:update(dt)
+
+        if spaceship.mark == 'alive' then
+            Alien.enableSpawning(game.alien_spawnchance)
+        end
+        Alien:update(dt)
+
         if #Asteroids == 0 then
             game.state = 'loading level'
         end
@@ -185,7 +225,7 @@ function love.draw()
         end
     end
     ]]
-    
+
     if game.state == 'menu' then
         game.score = 0
         love.graphics.print('press escape + 1 to exit game. (ALL TIMES.)', game.font, 10, 10)
@@ -195,6 +235,7 @@ function love.draw()
         love.graphics.print(_G.collisionData, 10, 10)
         Asteroid:draw()
         spaceship:draw()
+        Alien:draw()
         love.graphics.print("SCORE: "..game.score..",  LEVEL:"..Level.level, game.font, window_width / 2, 10, nil, 1.1)
     elseif game.state == 'loading level' then
         Level:draw()

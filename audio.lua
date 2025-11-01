@@ -12,6 +12,11 @@ function Audio:init()
         asteroid = {
             shield_down = love.audio.newSource('audio/asteroid/shield_down.mp3', 'static'),
         },
+        alien = {
+            die = love.audio.newSource('audio/alien/death.mp3', 'static'),
+            shoot = love.audio.newSource('audio/alien/shoot.mp3', 'static'),
+            alert = love.audio.newSource('audio/alien/alert.mp3', 'static')
+        },
         menutheme = love.audio.newSource('audio/main_menu_theme.mp3', 'stream')
     }
     audio.menutheme:setLooping(true)

@@ -43,9 +43,8 @@ function Menu:draw()
             if i > 10 then break end
             local x = window_width * (1/3)
             local y = (window_height * (1/10)) + (i * 30)
-            love.graphics.setColor(0, 1, 0)
             lastScore = ""
-            if spaceship_lastname == v.name and spaceship_lastscore == v.score then lastScore = "Your place! > " end
+            if spaceship_lastname == v.name and spaceship_lastscore == v.score then lastScore = "Your place! > " ; love.graphics.setColor(0, 1, 0) end
             love.graphics.print(lastScore, game.font, x - 200, y)
             if i <= 3 then love.graphics.setColor(1, 1, 0) end
                 love.graphics.print(i.."."..v.name..", score:"..v.score, game.font, x, y)

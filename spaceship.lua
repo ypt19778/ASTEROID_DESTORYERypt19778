@@ -68,6 +68,15 @@ function Spaceship.new(world)
 
     instance.bombs = 0
 
+    instance.maxFuel = 100
+    instance.fuel = instance.maxFuel
+    instance.fuelDrainRate = 0.25
+    instance.fuelBar = {
+        x = window_width / 1.25, y = window_height / 1.25, width = 0, height = 20
+    }
+
+    instance.canReverse = false
+
     table.insert(Spaceships, instance)
     return instance
 end
@@ -86,18 +95,45 @@ function Spaceship:move()
     self.angle = math.atan2(self.y - self.lookAt.y, self.x - self.lookAt.x)
     self.cos = -math.cos(self.angle)
     self.sin = -math.sin(self.angle)
-    if love.keyboard.isDown("w") and self.velocity < self.maxVelocity then
-        self.physics.body:applyLinearImpulse(self.speed * self.cos, self.speed * self.sin)
-        self.isAccelerating = true
-    else self.isAccelerating = false end
-    if love.keyboard.isDown("a") then
-        self.rotation = self.rotation - self.angularSpeed
-    elseif love.keyboard.isDown("d") then
-        self.rotation = self.rotation + self.angularSpeed
+    if self.fuel > 0 then
+        if love.keyboard.isDown("w") and self.velocity < self.maxVelocity then
+            self.physics.body:applyLinearImpulse(self.speed * self.cos, self.speed * self.sin)
+            self.isAccelerating = true
+            self.fuel = self.fuel - self.fuelDrainRate
+        else self.isAccelerating = false end
+        if love.keyboard.isDown("a") then
+            self.rotation = self.rotation - self.angularSpeed
+        elseif love.keyboard.isDown("d") then
+            self.rotation = self.rotation + self.angularSpeed
+        end
+        if self.canReverse then
+            if love.keyboard.isDown("s") then
+                self.physics.body:applyLinearImpulse(self.speed * -self.cos, self.speed * -self.sin)
+            else self.physics.damping = self.physics.defDamping end
+        end
     end
-    if love.keyboard.isDown("s") then
-        self.physics.damping = self.physics.brakeDamping
-    else self.physics.damping = self.physics.defDamping end
+end
+
+function Spaceship:checkDeathCollision(tag)
+    if _G.collisionData == self.tag.."collide"..tag then
+        if self.shields > 0 then
+            self.iFrames = 200
+            self.shields = self.shields - 1
+            audio.spaceship.shield_down:stop()
+            audio.spaceship.shield_down:play()
+            return
+        elseif self.shields == 0 then
+            if self.mark == 'alive' then
+                self.pSystem:emit(30)
+            end
+            self.mark = 'dead'
+
+            print('you died from:'..tag)
+            audio.sounds.explode:stop()
+            audio.sounds.explode:play()
+            return
+        end
+    end
 end
 
 function Spaceship:update(dt)
@@ -112,23 +148,16 @@ function Spaceship:update(dt)
         end
         self.shield_rotation = self.shield_rotation + 1 * dt
         self.iFrameFlash = self.iFrameFlash + dt * 20
-        for _, asteroid in ipairs(Asteroids) do
-            if self.iFrames == 0 then
-                if _G.collisionData == self.tag.."collide"..asteroid.tag then
-                    if self.shields == 0 then
-                        if self.mark == 'alive' then
-                            self.pSystem:emit(30)
-                        end
-                        self.mark = 'dead'
-                        print('you died from:'..asteroid.tag)
-                        audio.sounds.explode:stop()
-                        audio.sounds.explode:play()
-                    elseif self.shields > 0 then
-                        self.shields = self.shields - 1
-                        audio.spaceship.shield_down:stop()
-                        audio.spaceship.shield_down:play()
-                        self.iFrames = 200
-                    end
+        self.fuelBar.width = self.fuel
+
+        if self.iFrames <= 0 then
+            for _, asteroid in ipairs(Asteroids) do
+                self:checkDeathCollision(asteroid.tag)
+            end
+            for _, alien in ipairs(Aliens) do
+                self:checkDeathCollision(alien.tag)
+                for _, projectile in ipairs(alien.projectiles) do
+                    self:checkDeathCollision(projectile.tag)
                 end
             end
         end
@@ -150,7 +179,9 @@ function Spaceship:update(dt)
         elseif self.x > window_width + 5 then
             self.physics.body:setX(0 - 5)
         end
+
         self:move()
+
         self:updateProjectiles(dt)
     elseif self.opt_menu then
         game.state = 'menu'
@@ -178,9 +209,14 @@ function Spaceship:printEndCredits()
 
     love.graphics.print("please enter your name: \n\n"..self.name.."\n\nand ENTER to continue.", game.font, window_width * (1/3), window_height * (1/4), nil, 1.2)
 
-    if self.named then
-        love.graphics.print('PRESS "q" TO WARP TO MAIN MENU', game.font, 10, window_height / 2, nil, 1.1)
+    for i = 1, #game.highscores do
+        if i > 10 then break end
+        if self.named then
+            if self.name == game.highscores[i].name then self.name = "" self.named = false end
+            love.graphics.print('PRESS "q" TO WARP TO MAIN MENU', game.font, 10, window_height / 2, nil, 1.1)
+        end
     end
+
     love.graphics.setColor(1, 1, 1)
 end
 
@@ -237,6 +273,18 @@ function Spaceship:draw()
         elseif self.iFrameFlash >= 1 then
             love.graphics.draw(self.sprite, self.x, self.y, self.rotation - 1.5, game.scale, nil, self.sprite_width / 2, self.sprite_height / 2)
         end
+
+        if self.fuel >= 75 then
+            love.graphics.setColor(0, 1, 0)
+        elseif self.fuel >= 35 then
+            love.graphics.setColor(1, 1, 0)
+        else
+            love.graphics.setColor(1, 0, 0)
+        end
+        love.graphics.rectangle('fill', self.fuelBar.x, self.fuelBar.y, self.fuelBar.width, self.fuelBar.height)
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.print('fuel:', game.font, self.fuelBar.x - 60, self.fuelBar.y + 3)
+
         self:drawProjectiles()
     elseif self.mark == 'dead' then
         self:printEndCredits()
@@ -292,11 +340,10 @@ function Spaceship:shoot(projectile_type, x, y, shift_angle)
     angle = math.fmod(ofs_angle + 2 * math.pi, 2 * math.pi)
     local cos = -math.cos(angle)
     local sin = -math.sin(angle)
-    print("angle: "..angle..", cosine: "..cos..", sine: "..sin)
 
     local projectile = {}
     projectile.type = projectile_type or "default"
-    print('spaceship shoot, type:'..projectile.type)
+    --print('spaceship shoot, type:'..projectile.type)
     projectile.tag = "SPACESHIP_PROJECTILE"
     projectile.x = self.lookAt.x
     projectile.y = self.lookAt.y
@@ -388,7 +435,7 @@ end
 function Spaceship:drawProjectiles()
     for index_projectile, projectile in ipairs(self.projectiles) do
         love.graphics.circle('fill', projectile.x, projectile.y, projectile.radius)
-        print('drawproj: type'..projectile.type)
+        --print('drawproj: type'..projectile.type)
         if projectile.type == "bomb" then
             love.graphics.setColor(1, 0, 0)
             print('set vol to red')

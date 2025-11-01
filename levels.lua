@@ -4,10 +4,19 @@ Level.transmit_timer = 0
 Level.oneEvent = 1
 Level.difficulty = 1
 
+Level.upgrade_levels = {}
+local iteration = 0
+repeat
+    iteration = iteration + 1
+    local num = 6 * iteration
+    table.insert(Level.upgrade_levels, num)
+until #Level.upgrade_levels > 10
+
 function Level:update()
     if not Powerups.rolled then
         self.level = self.level + 1
-        for i, v in ipairs({3, 6, 9, 12, 15, 18, 30, 31, 32}) do -- max difficulty = 9
+
+        for i, v in ipairs(self.upgrade_levels) do -- max difficulty = 9
             if self.level == v then
                 self.difficulty = self.difficulty + 1
             end
@@ -15,6 +24,7 @@ function Level:update()
         Powerups:rollCards()
     end
     if Powerups.menu.done == true then
+        game.alien_spawnchance = game.alien_spawnchance - (self.difficulty * 10)
         love.load()
         game.state = 'running'
     end

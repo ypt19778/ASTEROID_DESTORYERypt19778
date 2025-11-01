@@ -1,5 +1,6 @@
 Powerups = {}
 Powerups.menu = {done = false}
+Powerups.card_gap = 125
 Powerups.card_sprite = love.graphics.newImage('graphics/sprites/card.png')
 Powerups.card_width = Powerups.card_sprite:getWidth()
 Powerups.card_height = Powerups.card_sprite:getHeight()
@@ -7,8 +8,28 @@ Powerups.card_rotation = 1
 Powerups.spin_timer = 0
 Powerups.card_types = {
     'less cooldown',
+    'less cooldown',
+    'less cooldown',
+    'more fuel',
+    'more fuel',
+    'lower fuel useage',
+    'reversable ship',
+
     'add shield',
-    'add bomb'
+    'add shield',
+    'add shield',
+    'add bomb',
+    'add bomb',
+
+    'alien magnet',
+
+    'point bonus 500',
+    'point bonus 500',
+    'point bonus 500',
+    'point bonus 1000',
+    'bonus points %5',
+    'bonus points %5',
+    'bonus points %10'
 }
 Powerups.cards = {}
 Powerups.buttons = {
@@ -21,9 +42,30 @@ function Powerups:setSpaceship(spaceship)
 end
 
 function Powerups:rollCards()
-    local random_cards = {math.random(#self.card_types), math.random(#self.card_types), math.random(#self.card_types)}
-    local start_location_x = 100
-    local start_location_y = 300
+    local random_cards = {}
+    while #random_cards < 3 do
+        local cardnotfound = true
+        local card = math.random(1, #self.card_types)
+        for index, value in ipairs(random_cards) do
+            if card == value then
+                cardnotfound = false
+            end
+        end
+        if self.spaceship.canReverse == true and self.card_types[card] == 'reversable ship' then
+            cardnotfound = false
+            print('found permanent reverse.')
+        end
+        if cardnotfound then
+            table.insert(random_cards, card)
+        end
+    end
+
+    --[[
+    local start_location_x = (window_width / 2) - ((self.card_width * (game.scale * 10)) * 1.5 + self.card_gap)
+    local start_location_y = window_height / 2
+    ]]
+    local start_location_x = window_width / 8
+    local start_location_y = window_height / 2
     self.card_rotation = 0
     for i = 0, 2 do
         local new_card = {}
@@ -52,7 +94,9 @@ function Powerups:display()
     for _, card in ipairs(self.cards) do
         love.graphics.draw(self.card_sprite, card.x, card.y, self.card_rotation, game.scale * 10)
         love.graphics.print('choose your card.', game.font, 300, 75, nil, 1.2)
-        love.graphics.print(card.powerup, game.font, card.x + (#card.powerup * 1.3) + 8, card.y + card.width / 2)
+        love.graphics.setFont(game.font)
+        love.graphics.printf(card.powerup, card.x + 30, card.y + card.height / 4, 150)
+        --love.graphics.print(card.powerup, game.font, card.x + (#card.powerup * 1.3) + 8, card.y + card.width / 2)
         love.graphics.print(self.card_rotation)
     end
     for _, button in ipairs(self.buttons) do
@@ -70,12 +114,26 @@ function Powerups:checkMousepress(x, y, MB)
                 if card.powerup == 'less cooldown' then
                     self.spaceship.fireRate = self.spaceship.fireRate + (self.spaceship.fireRate * (1/10))
                     print('spaceship firerate changed to'..self.spaceship.fireRate)
+                elseif card.powerup == 'reversable ship' then
+                    self.spaceship.canReverse = true
                 elseif card.powerup == 'add shield' then
                     self.spaceship.shields = (self.spaceship.shields) + 1
                     print('added a shield'..self.spaceship.shields)
                 elseif card.powerup == 'add bomb' then
                     self.spaceship.bombs = self.spaceship.bombs + 1
                     print('added bomb to spaceship.')
+                elseif card.powerup == 'alien magnet' then
+                    game.alien_spawnchance = game.alien_spawnchance - 100
+                elseif card.powerup == 'lower fuel consumption' then
+                    self.spaceship.fuelDrainRate = self.spaceship.fuelDrainRate - 1
+                elseif card.powerup == 'more fuel' then
+                    self.spaceship.maxFuel = self.spaceship.maxFuel * 1.1
+                elseif string.find(card.powerup, 'point bonus ') then
+                    local pointbonus = tonumber(string.sub(card.powerup, 13))
+                    game.score = game.score + pointbonus
+                elseif string.find(card.powerup, 'bonus points %%') then
+                    local pointbonus = tonumber(string.sub(card.powerup, 15))
+                    game.score = game.score + (game.score * (pointbonus / 100))
                 end
                 self.menu.done = true
                 break
