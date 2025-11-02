@@ -171,7 +171,7 @@ function Asteroid:update(dt)
                         game_asteroid.physics.body:setPosition(asteroid.x, asteroid.y)
                     end
                 end
-                ]]s
+                ]]
             end
         elseif asteroid.healthPoints == 1 then
             asteroid.hasShield = false
