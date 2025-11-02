@@ -150,6 +150,7 @@ function Spaceship:update(dt)
         self.iFrameFlash = self.iFrameFlash + dt * 20
         self.fuelBar.width = self.fuel
 
+        --[[
         if self.iFrames <= 0 then
             for _, asteroid in ipairs(Asteroids) do
                 self:checkDeathCollision(asteroid.tag)
@@ -161,6 +162,7 @@ function Spaceship:update(dt)
                 end
             end
         end
+        ]]
 
         if self.mark == 'dead' and self.pSystem:getCount() == 0 then
             self:kill(self.index)

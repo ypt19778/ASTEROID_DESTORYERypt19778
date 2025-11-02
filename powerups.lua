@@ -123,7 +123,7 @@ function Powerups:checkMousepress(x, y, MB)
                     self.spaceship.bombs = self.spaceship.bombs + 1
                     print('added bomb to spaceship.')
                 elseif card.powerup == 'alien magnet' then
-                    game.alien_spawnchance = game.alien_spawnchance - 100
+                    game.alien_spawnchance = 100--game.alien_spawnchance - 100
                 elseif card.powerup == 'lower fuel consumption' then
                     self.spaceship.fuelDrainRate = self.spaceship.fuelDrainRate - 1
                 elseif card.powerup == 'more fuel' then

@@ -21,12 +21,6 @@ game.storeScore = function (o)
     print(json_highscores)
     love.filesystem.write(game.saveDirectoryFile, json_highscores)
 end
---[[
-game.cleanFile = function ()
-    love.filesystem.write(game.saveDirectoryFile, "")
-end
-]]
-
 
 window_width, window_height = love.graphics.getDimensions()
 
@@ -167,6 +161,7 @@ end
 
 function love.update(dt)
     mouse.x, mouse.y = love.mouse.getPosition()
+    game.score = math.floor(game.score)
     world:update(dt)
     if love.keyboard.isDown('escape') and love.keyboard.isDown('1') then
         love.event.quit()
@@ -232,7 +227,7 @@ function love.draw()
         Asteroid:draw()
         menu:draw()
     elseif game.state == 'running' then
-        love.graphics.print(_G.collisionData, 10, 10)
+        --love.graphics.print(_G.collisionData, 10, 10)
         Asteroid:draw()
         spaceship:draw()
         Alien:draw()

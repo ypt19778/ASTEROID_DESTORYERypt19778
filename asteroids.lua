@@ -160,19 +160,18 @@ function Asteroid:update(dt)
                 audio.sounds.explode:play()
                 game.score = game.score + asteroid.size * 10
 
+                --scrapped new asteroid code
+                --[[
                 if asteroid.size > 1 then
-                    --[[
                     local numNewAsteroids = 2
                     for i = 1, numNewAsteroids do
                         local newSize = asteroid.size - 1
                         local newTagNum = #Asteroids + 1
-                        game_asteroid = Asteroid.new(world, newSize, newTagNum, {x = asteroid.x, y = asteroid.y})
-                        game_asteroid.x = asteroid.x + math.random(-20, 20)
-                        game_asteroid.y = asteroid.y + math.random(-20, 20)
+                        game_asteroid = Asteroid.new(world, newSize, newTagNum, {x = asteroid.x + math.random(20), y = asteroid.y + math.random})
                         game_asteroid.physics.body:setPosition(asteroid.x, asteroid.y)
                     end
-                    ]]
                 end
+                ]]s
             end
         elseif asteroid.healthPoints == 1 then
             asteroid.hasShield = false

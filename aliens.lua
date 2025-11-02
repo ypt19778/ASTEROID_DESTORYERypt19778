@@ -39,6 +39,12 @@ function Alien.new(world, spaceship, location, vectors)
     end
     instance.frameSpeed = 2 -- in (_00%) percentage
 
+    local pSystem_img = love.graphics.newImage('graphics/sprites/alien_particle.png')
+    instance.pSystem = love.graphics.newParticleSystem(pSystem_img)
+    instance.pSystem:setLinearAcceleration(-400, -400, 400, 400)
+    instance.pSystem:setSpinVariation(1)
+    instance.pSystem:setParticleLifetime(1, 2)
+
     instance.currentFrame = 1
 
     instance.fireRate = 0.0167
@@ -173,7 +179,6 @@ function Alien:drawProjectiles()
             love.graphics.setColor(1, 1, 1)
         end
 
-        --love.graphics.circle('fill', projectile.x, projectile.y, projectile.radius)
         love.graphics.draw(self.projectile_sprite, projectile.x, projectile.y, nil, game.scale, nil, self.projectile_sprite_width / 2, self.projectile_sprite_height / 2)
     end
 end
@@ -188,6 +193,7 @@ end
 
 function Alien:update(dt)
     for index_alien, alien in ipairs(Aliens) do
+        alien.pSystem:update(dt)
         alien.spaceship = spaceship
         alien.x, alien.y = alien.physics.body:getPosition()
         if alien.mark == 'alive' then
@@ -198,6 +204,7 @@ function Alien:update(dt)
             end
 
             if alien.x > window_width + edge_ofs or alien.x < 0 - edge_ofs or alien.y > window_height + edge_ofs or alien.y < 0 - edge_ofs then
+                alien.pSystem:emit(40)
                 alien.mark = "dead"
             end
             for index_spaceship_projectile, spaceship_projectile in ipairs(alien.spaceship.projectiles) do
@@ -205,6 +212,7 @@ function Alien:update(dt)
                     game.score = game.score + alien.pointValue
                     alien.physics.fixture:destroy()
                     alien.spaceship:killProjectile(index_spaceship_projectile)
+                    alien.pSystem:emit(40)
                     alien.mark = "dead"
                     audio.alien.die:stop()
                     audio.alien.die:play()
@@ -219,14 +227,17 @@ function Alien:update(dt)
         elseif alien.mark == 'dead' then
             --Alien:kill(alien.tagnum)
             if not alien.physics.fixture:isDestroyed() then alien.physics.fixture:destroy() end
-            alien = nil
-            table.remove(Aliens, index_alien)
+            if alien.pSystem:getCount() == 0 then
+                alien = nil
+                table.remove(Aliens, index_alien)
+            end
         end
     end
 end
 
 function Alien:draw()
     for index_alien, alien in ipairs(Aliens) do
+        love.graphics.draw(alien.pSystem, alien.x, alien.y, nil, game.scale)
         if alien.mark == 'alive' then
             love.graphics.print(alien.tagnum, alien.x, alien.y)
             love.graphics.draw(alien.sprite, alien.frames[math.floor(alien.currentFrame)], alien.x, alien.y, alien.physics.body:getAngle(), game.scale * 1.5, nil, alien.radius / 2 - 2, alien.radius / 2 - 2)
