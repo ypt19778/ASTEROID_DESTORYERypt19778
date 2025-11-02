@@ -116,7 +116,7 @@ function love.load()
     Powerups.menu.done = false
     spaceship.mark = 'alive'
     spaceship.physics.body:setPosition(window_width / 2, window_height / 2)
-    spaceship.asteroid_killcount = 0
+    spaceship.deathCountdown = 10
     spaceship.iFrames = 200
     for asteroid_index, asteroid in ipairs(Asteroids) do
         if asteroid.mark == 'alive' then
@@ -199,6 +199,7 @@ function love.textinput(text)
 end
 
 function love.draw()
+    love.graphics.setBackgroundColor(0.1, 0.1, 0.1)
     --[[
     local bodies = world:getBodies()
     for _, body in ipairs(bodies) do

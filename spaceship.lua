@@ -77,6 +77,8 @@ function Spaceship.new(world)
 
     instance.canReverse = false
 
+    instance.deathCountdown = 10
+
     table.insert(Spaceships, instance)
     return instance
 end
@@ -150,7 +152,6 @@ function Spaceship:update(dt)
         self.iFrameFlash = self.iFrameFlash + dt * 20
         self.fuelBar.width = self.fuel
 
-        --[[
         if self.iFrames <= 0 then
             for _, asteroid in ipairs(Asteroids) do
                 self:checkDeathCollision(asteroid.tag)
@@ -162,7 +163,6 @@ function Spaceship:update(dt)
                 end
             end
         end
-        ]]
 
         if self.mark == 'dead' and self.pSystem:getCount() == 0 then
             self:kill(self.index)
@@ -185,6 +185,19 @@ function Spaceship:update(dt)
         self:move()
 
         self:updateProjectiles(dt)
+
+        if self.fuel == 0 then
+            self.deathCountdown = self.deathCountdown - (1 * dt)
+        end
+        if self.deathCountdown <= 0 then
+            if self.mark == 'alive' then
+                self.pSystem:emit(30)
+            end
+            self.mark = 'dead'
+
+            audio.sounds.explode:stop()
+            audio.sounds.explode:play()
+        end
     elseif self.opt_menu then
         game.state = 'menu'
         game.storeScore({score = game.score, name = self.name})
@@ -288,6 +301,10 @@ function Spaceship:draw()
         love.graphics.print('fuel:', game.font, self.fuelBar.x - 60, self.fuelBar.y + 3)
 
         self:drawProjectiles()
+
+        if self.fuel == 0 then
+            love.graphics.print(math.floor(self.deathCountdown)..'...', game.font, window_width / 2, window_height / 2, nil, game.scale)
+        end
     elseif self.mark == 'dead' then
         self:printEndCredits()
     end
