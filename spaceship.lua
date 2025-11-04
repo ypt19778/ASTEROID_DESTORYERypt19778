@@ -111,6 +111,7 @@ function Spaceship:move()
         if self.canReverse then
             if love.keyboard.isDown("s") then
                 self.physics.body:applyLinearImpulse(self.speed * -self.cos, self.speed * -self.sin)
+                self.fuel = self.fuel - self.fuelDrainRate
             else self.physics.damping = self.physics.defDamping end
         end
     end
@@ -340,7 +341,7 @@ function Spaceship:checkKeypress(key)
         if key == 'backspace' then
             self.name = string.sub(self.name, 1, #self.name - 1)
         end
-        if key == 'return' then
+        if key == 'return' or key == 'kpenter' then
             self.named = true
         end
         if self.named then

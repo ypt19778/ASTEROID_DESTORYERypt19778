@@ -47,7 +47,8 @@ function Powerups:rollCards()
         local cardnotfound = true
         local card = math.random(1, #self.card_types)
         for index, value in ipairs(random_cards) do
-            if card == value then
+            print(value)
+            if self.card_types[card] == value then
                 cardnotfound = false
             end
         end
@@ -56,7 +57,7 @@ function Powerups:rollCards()
             print('found permanent reverse.')
         end
         if cardnotfound then
-            table.insert(random_cards, card)
+            table.insert(random_cards, self.card_types[card])
         end
     end
 
@@ -73,7 +74,7 @@ function Powerups:rollCards()
         new_card.height = self.card_height * (game.scale * 10)
         new_card.x = (start_location_x * (i + 2) + 125 * i) - new_card.width / 2
         new_card.y = start_location_y - new_card.height / 2
-        new_card.powerup = self.card_types[random_cards[i + 1]]
+        new_card.powerup = random_cards[i + 1]
         table.insert(self.cards, new_card)
         --print('inserted new card to cards. Card:'..self.cards[i + 1].powerup)
     end

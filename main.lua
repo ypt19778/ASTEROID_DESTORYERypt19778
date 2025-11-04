@@ -1,6 +1,6 @@
 math.randomseed(os.clock())
 love.graphics.setDefaultFilter('nearest', 'nearest')
-love.window.setFullscreen(true)
+love.window.setFullscreen(false)
 
 game = {
     saveDirectoryFile = "savedata.json",
@@ -99,14 +99,16 @@ function love.load()
     if spaceship.name and game.score then
         spaceship_lastname = spaceship.name; spaceship_lastscore = game.score
     end
+    if not love.filesystem.getInfo(game.saveDirectoryFile) then
+        love.filesystem.write(game.saveDirectoryFile, "{}")
+    end
+
     json_highscores = love.filesystem.read(game.saveDirectoryFile)
-    print(json_highscores)
-    
+
     game.highscores = json.decode(json_highscores)
     table.sort(game.highscores, function(a, b)
         return a.score > b.score
     end)
-    print(game.highscores_data)
 
     math.randomseed(os.clock())
 
@@ -199,7 +201,7 @@ function love.textinput(text)
 end
 
 function love.draw()
-    love.graphics.setBackgroundColor(0.1, 0.1, 0.1)
+    love.graphics.setBackgroundColor(0.05, 0.05, 0.1)
     --[[
     local bodies = world:getBodies()
     for _, body in ipairs(bodies) do

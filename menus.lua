@@ -25,6 +25,9 @@ end
 
 function Menu:draw()
     if self.state == 'main' then
+        --instructions
+        love.graphics.print('movement controls:\n\nW to accelerate,\n\nA to turn left,\n\nD to turn right,\n\nS backwards (with card)', game.font, 450, 400, nil, 1.2)
+        love.graphics.print('shooting controls:\n\nJ or K to shoot,\n\nB for bombs (with card)', game.font, 100, 400, nil, 1.2)
         love.graphics.print(self.title, game.font, window_width * (1/5), 40, nil, game.scale * 2)
         for num, button in ipairs(self.buttons) do
             love.graphics.print(button.text, game.font, button.x + button.width / 2 - 45, button.y + button.height / 2)
