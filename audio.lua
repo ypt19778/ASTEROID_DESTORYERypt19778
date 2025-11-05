@@ -7,7 +7,8 @@ function Audio:init()
         },
         spaceship = {
             shoot = love.audio.newSource('audio/spaceship/fire.mp3', 'static'),
-            shield_down = love.audio.newSource('audio/spaceship/shield_down.mp3', 'static')
+            shield_down = love.audio.newSource('audio/spaceship/shield_down.mp3', 'static'),
+            fuel_alert = love.audio.newSource('audio/spaceship/alert.mp3', 'static')
         },
         asteroid = {
             shield_down = love.audio.newSource('audio/asteroid/shield_down.mp3', 'static'),
