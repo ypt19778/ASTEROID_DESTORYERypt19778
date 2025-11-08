@@ -1,6 +1,6 @@
 math.randomseed(os.clock())
 love.graphics.setDefaultFilter('nearest', 'nearest')
-love.window.setFullscreen(false)
+love.window.setFullscreen(true)
 
 game = {
     saveDirectoryFile = "savedata.json",

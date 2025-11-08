@@ -119,23 +119,25 @@ end
 
 function Spaceship:checkDeathCollision(tag)
     if _G.collisionData == self.tag.."collide"..tag then
-        if self.shields > 0 then
-            self.iFrames = 200
-            self.shields = self.shields - 1
-            audio.spaceship.shield_down:stop()
-            audio.spaceship.shield_down:play()
-            return
-        elseif self.shields == 0 then
-            if self.mark == 'alive' then
-                self.pSystem:emit(30)
-            end
-            self.mark = 'dead'
+        return true
+    end
+    return false
+end
 
-            print('you died from:'..tag)
-            audio.sounds.explode:stop()
-            audio.sounds.explode:play()
-            return
+function Spaceship:executeDeath()
+    if self.shields > 0 then
+        self.iFrames = 200
+        self.shields = self.shields - 1
+        audio.spaceship.shield_down:stop()
+        audio.spaceship.shield_down:play()
+    elseif self.shields == 0 then
+        if self.mark == 'alive' then
+            self.pSystem:emit(30)
         end
+        self.mark = 'dead'
+
+        audio.sounds.explode:stop()
+        audio.sounds.explode:play()
     end
 end
 
@@ -155,12 +157,24 @@ function Spaceship:update(dt)
 
         if self.iFrames <= 0 then
             for _, asteroid in ipairs(Asteroids) do
-                self:checkDeathCollision(asteroid.tag)
+                local iscollisionAsteroid = self:checkDeathCollision(asteroid.tag)
+                if iscollisionAsteroid then
+                    self:executeDeath()
+                    break
+                end
             end
             for _, alien in ipairs(Aliens) do
-                self:checkDeathCollision(alien.tag)
+                local iscollisionAlien = self:checkDeathCollision(alien.tag)
+                if iscollisionAlien then
+                    self:executeDeath()
+                    break
+                end
                 for _, projectile in ipairs(alien.projectiles) do
-                    self:checkDeathCollision(projectile.tag)
+                    local iscollisionAlienProjectile = self:checkDeathCollision(projectile.tag)
+                    if iscollisionAlienProjectile then
+                        self:executeDeath()
+                        break
+                    end
                 end
             end
         end
