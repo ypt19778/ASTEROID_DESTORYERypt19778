@@ -125,12 +125,7 @@ function Spaceship:checkDeathCollision(tag)
 end
 
 function Spaceship:executeDeath()
-    if self.shields > 0 then
-        self.iFrames = 200
-        self.shields = self.shields - 1
-        audio.spaceship.shield_down:stop()
-        audio.spaceship.shield_down:play()
-    elseif self.shields == 0 then
+    if self.shields == 0 then
         if self.mark == 'alive' then
             self.pSystem:emit(30)
         end
@@ -138,7 +133,16 @@ function Spaceship:executeDeath()
 
         audio.sounds.explode:stop()
         audio.sounds.explode:play()
+    elseif self.shields > 0 then
+        self.iFrames = 200
+        self.shields = self.shields - 1
+        audio.spaceship.shield_down:stop()
+        audio.spaceship.shield_down:play()
     end
+
+    --make it so it only happens once + double check spaceship iframes are set
+    self.iFrames = 200
+    return 
 end
 
 function Spaceship:update(dt)
